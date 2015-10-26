@@ -1,0 +1,4 @@
+fnames
+/home/claire/Dropbox (MIT)/MIT/alm_lab/metabolomics/test_data/mtab_alm_081715_06.threshold1000.mzML
+/home/claire/Dropbox (MIT)/MIT/alm_lab/metabolomics/test_data/mtab_alm_081715_08.threshold1000.mzML
+/home/claire/Dropbox (MIT)/MIT/alm_lab/metabolomics/test_data/mtab_alm_081715_09.threshold1000.mzML

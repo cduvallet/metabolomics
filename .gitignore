@@ -1,3 +1,5 @@
 *.RAW
 *.mzML
 *.mzML
+*.R~
+*.py~
