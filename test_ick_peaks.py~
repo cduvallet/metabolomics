@@ -1,0 +1,13 @@
+import preprocessing_metab as mtab
+
+working_directory = '/home/claire/Dropbox (MIT)/MIT/alm_lab/metabolomics'
+
+neg_params = {}
+neg_params['ppm'] = 2
+neg_params['snthresh'] = 10
+neg_params['prefilter_min'] = 5
+neg_params['prefilter_max'] = 1000
+neg_params['integrate'] = 2
+neg_params['peakwidth_min'] = 20
+neg_params['peakwidth_max'] = 60
+neg_params['noise'] = 1000

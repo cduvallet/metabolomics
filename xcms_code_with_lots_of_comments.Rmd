@@ -1,0 +1,262 @@
+
+Analyzing the Tps6 samples, testing parameters in negative ion mode. Note that this comes
+after playing around with the parameters with the vent DOM samples for a while
+Krista Longnecker
+April 9, 2014
+========================================================
+
+Keeping track of details by running this code as an R Markdown document. Essentially the code will be combined with the output into an HTML file. Note that there are three places where you will have to change
+things based on which ionization mode you are running
+
+1. I found a lower ppm in the centWave step was appropriate for negative ion mode data
+2. I also pre-thresholded the data in negative ion mode to ignore peaks < 1000 (absolute intensity)
+3. Around line 139 you need to decide which ionization mode you want at the end
+4. In CAMERA, you need to select the ionization mode before finding adducts (line 217)
+
+Go ahead and load up some of the parameters:
+```{r Settings, eval=TRUE}
+library(xcms)
+library(CAMERA)
+library(vegan)
+library(Heatplus)
+library(gplots)
+library(RColorBrewer)
+library(ggplot2)
+library(ggdendro)
+
+
+```
+
+```{r setup, echo = TRUE, eval=TRUE}
+
+knitr::opts_chunk$set(error=TRUE)
+
+```
+
+Now go ahead and do the peak picking, or load in the existing file...peak picking can be time consuming and it easier to only do that once
+
+```{r GettingData, eval = TRUE}
+
+##if you want to save time and process shorter time section, can set the 
+##scanrange here (min and mx time, in seconds), and add scanrange = scanrange
+##to the centWave peak picking below
+#scanrange=c(100,300)
+##Note: in negative ion mode, I have been setting a threshold for peaks in MSconvert before
+##I even get to this step. This massively improves the peak picking in XCMS
+usePath <- "C:/Users/Claire/Documents/MS_proc/UW_metabolomics_2015-08-18/files_to_process/2015-09-09.neg_batch_5percent"
+ext <- ".mzML"
+pre <- paste0(usePath,"/")
+mzdatafiles <- list.files(usePath, recursive=FALSE, full.names=TRUE, pattern=paste0("\\", ext))
+# mzdatafiles is class "character"
+
+if (FALSE) {
+## How many CPU cores has your machine (or cluster) ?
+nSlaves=4
+
+pdf(file = "test.pdf") #if want PDF file, add this after mzdiff: ,sleep = 0.0001 and uncomment dev.off()
+
+#For negative ion mode: ppm = 2 seems best
+#For positive ion mode: ppm = 3 seems best
+xs<-xcmsSet(mzdatafiles, method = "centWave",ppm = 2 ,snthresh = 10,
+  prefilter = c(5,1000), mzCenterFun = "wMean",integrate = 2, 
+  verbose.columns = TRUE, peakwidth=c(20,60), fitgauss= TRUE, noise = 1000, 
+  mzdiff=-0.005,nSlaves=nSlaves, sleep = 0.00001)
+
+#scanrange = scanrange)
+dev.off()
+
+} else { 
+  #load in a previous version of peak picking (picked with the above parameters)
+  load("C:/Users/Claire/Dropbox (MIT)/MIT/alm_lab/UW_metabolomics_proc_shared/alignment_results/underworlds_24hr.2015-08-18-run.neg_batch_5percent.neg.proc-2015-09-09.Rimage")
+
+  }
+
+
+
+#setup the filenames all in one place bc easier...
+fName_allPeaks <- "test.allpeaks.csv"
+fName_aligned <- "test.aligned.csv"
+NameOfFile <- "test.Rimage"
+
+save.image(NameOfFile)
+
+# #####the peakShape code seems to be from Tony Larson...via the Google Groups forum  
+# ####turn this off 10/21/2013 (after v1 attempt)
+#there is some sort of issue running this within r Markdown, fix it later
+# source("removingNoise.R")  
+# xs2 <- peakShape(xs,cor.val=0.9)
+
+
+```
+
+Setup the ability to rename the classes based on information in the CSV file
+
+```{r getSampleInformation, eval=FALSE}
+#figure out how to pass values to/from functions later...use this to match the files 
+#with the information about what sample was run for each file
+wDir <- "C:/Users/Claire/Dropbox (MIT)/MIT/alm_lab/UW_metabolomics_proc_shared/alignment_results/"
+all <- read.csv(paste0(wDir,"underworlds_24hr.2015-08-18-run.neg_batch_5percent.neg.proc-2015-09-09.sequence_file.csv"))
+putDataHere <-data.frame()
+
+for(i in 1:length(all$File.Name)) {
+  h <- all$File.Name[i]
+  #paste0 will strip out the spaces; make the full filename here    
+  h <-paste0(pre,h,ext)
+  
+  #this will pick up the right row in mzdatafiles
+  m <- match(h,mzdatafiles)
+  if (!is.na(m)) {
+    tData <- all[i,]
+    if (nrow(putDataHere)==0) {
+      putDataHere <- tData
+      } else {
+    putDataHere[m,] <-tData
+    }
+    rm(tData)
+  }   
+  rm(h,m)
+}   
+
+rm(all) #keep this clean...
+
+# rm(classlist) 
+classlist <- matrix()
+#this next bit is a hack, but it works in the context of xcms
+for (i in 1:nrow(putDataHere)) {
+  classlist[i] <-paste0(putDataHere$ionMode[i],".",putDataHere$GoodData[i])
+}
+rm(i)
+
+
+```
+
+
+```{r DoGrouping_1, eval=FALSE}
+     
+##now I will need to consider the groups. First 'group' is actually the ionization mode
+#for simplicity, start by using split to get the files from one ionization mode  
+
+# xs is what comes out of the xmcs() peak picking code
+useXS <- xs
+
+#define the classes after the peak picking...
+#classlist was defined above, it's essentially a list of negative.1, negative.0, positive.1, postive.0 strings, corresponding to each sample
+
+# sampclass(useXS) <- classlist adds (or replaces) the 'class' column in useXS with what's in classlist
+sampclass(useXS) <- classlist 
+
+#note this will select files in negative ion mode that are marked with '1' in the GoodData column
+
+# here is where the classlist is used to select the subset of data!
+# split returns a list of subsets of useXS that you can access using simple brackets
+# so we want split(useXS, classlist)[class_of_interest]
+xsOne <- split(useXS,classlist)[["negative.1"]]
+putDataHere.1 <- split(putDataHere,classlist)[["negative.1"]]
+nSamples<-length(xsOne@filepaths)
+
+classlist.1 <- matrix()
+#this next bit is a hack, but it works in the context of xcms
+# this part is not necessary.
+for (i in 1:nrow(putDataHere.1)) {
+  classlist.1[i] <-paste0(putDataHere.1$ionMode[i],".",putDataHere.1$GoodData[i])#,".",
+#                        putDataHere.1$sampleType[i])
+}
+
+#set the groups to the QC/blank/samples before grouping:
+# classlist.1 is the same thing as classlist. She had originally added another .sampleType suffix to the values in the list but commented it out. So it's the same thing
+sampclass(xsOne) <-classlist.1
+
+# basically the important part of this is to get xsOne to contain just the batch of samples we wanna align
+rc.obi <-retcor.obiwarp(xsOne,plottype="deviation",profStep = 0.1,distFunc = "cor", 
+                         gapInit = 0.3,gapExtend=0.4)    
+
+xgN3 <-group.density(xsOne,minfrac=0,minsamp=1,bw=30,mzwid=0.001)     
+
+# oh this is the part where it finds RT/mz regions where samples had no peaks, and integrates over that region to make up a peak regardless
+# i think this is working off of the aligned peaks - yes! bc it makes no sense to fill in peaks from totally different samples that have totally differnet peaks
+xgF <- fillPeaks(xgN3, method = "chrom")                              
+
+#do some housecleaning bc this file is getting huge
+rm(rc.obi,xgN3,useXS)
+
+```
+
+```{r doQuickClusterAnalysis, eval = FALSE}
+dataOut <-peakTable(xgF)
+v <- colnames(dataOut)
+h <-grep("_tps6_",v)
+
+#so, h will have the index into the columns with actual data...keep those for the NMS
+fNMS <-data.frame(dataOut[,h])
+
+td <-decostand(fNMS,method= "pa") #convert to presence absence
+bc <-vegdist(t(td),binary=TRUE,method = "bray")
+hc <-hclust(bc,method = "average") #can also try ward
+
+p <- ggdendrogram(hc,rotate = TRUE)
+plot(p)
+
+```
+
+Go ahead and spit out some variables to the folder
+
+```{r SaveData, eval = FALSE}
+
+# NOT SURE WHAT THIS DOES - what is xgF at this point???
+# do I need to do this for every batch? One time for all samples of the same mode?
+
+#this will spit out the list of all features identified
+write.csv(xgF@peaks,file = fName_allPeaks)
+
+#if you want a table with everything lined up, use this:
+#generally better to wait until after CAMERA
+#write.csv(peakTable(xgF),file = "Tps6_aligned.2014.03.28.v1.csv")
+
+```
+
+These are the pieces for CAMERA
+      
+```{r CAMERA, eval = FALSE}
+#
+#nSamples <- length(mzdatafiles)
+#xsa<-xsAnnotate(xgF,sample = c(1:nSamples))
+#xsa<-xsAnnotate(xgF,sample = 34) randomly try one sample for now
+xsa<-xsAnnotate(xgF)
+
+#group the features initially just by retention time
+xsaF <-groupFWHM(xsa)
+
+#figure out which features also have a matching 13C feature. Have to enter both 
+#the relative error (ppm) and the absolute error (mzabs)
+xsaFI <-findIsotopes(xsaF,ppm=1.5,mzabs = 0.0001,minfrac = 1/nSamples)
+
+#now group by the correlations based on (1) intensity, (2) EIC, (3) isotopes...
+xsaC <-groupCorr(xsaFI,cor_eic_th=0.75,pval=0.05, graphMethod="hcs",
+ calcIso = TRUE, calcCiS = TRUE, calcCaS = FALSE)
+
+#setup the file to also look for adducts, only go with the primary adducts for the moment
+file <-system.file("rules/primary_adducts_neg.csv",package = "CAMERA")
+rules <-read.csv(file)
+an <-findAdducts(xsaC,polarity = "negative",rules=rules,ppm=1.5)
+
+#do some housecleaning
+rm(xsa,xsaF,xsaFI,xsaC)
+```
+
+
+And save the final steps
+
+```{r lastSave, eval =FALSE}
+#can plot some variables       
+#windows() #brings up a box for plotting that is outside RStudio (works better here)
+#plotEICs(an,pspec=2,maxlabel=5)
+#plotPsSpectrum(xsaC,2,maxlabel=5)
+
+#export the data to the CSV file
+write.csv(getPeaklist(an),file=fName_aligned) 
+save.image(NameOfFile)
+#
+
+
+```
+
