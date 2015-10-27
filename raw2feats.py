@@ -30,17 +30,13 @@ sequence_file_path = r'C:\Users\Claire\Documents\GitHub\metabolomics\test_data\t
 sequence_file_separator = ','    # deafults to ',' if not specified
 data_directory = r'C:\Users\Claire\Documents\GitHub\metabolomics\test_data'    # defaults to working_directory if not specified
 raw_data = False
-mode_to_process = 'both'        # This can be either 'neg','pos', or both 
-                            # WHen reading summary file, if it's given as any permutation of neg/negative or pos/positive, return the lowercase version: either neg or pos
-                            # If no default specified, return 'both'
-rimage = ''      # If peak-picking has already been done, can specify the Rimage in the summary file (like you can specify an OTU table)
-                 # If an rimage is specified, need to also specify a mode_to_process (can't be both!)
+mode = 'negative'     # This can be either 'neg' or 'pos' 
+                 # WHen reading summary file, if it's given as any permutation of neg/negative or pos/positive, return the lowercase version: either 'negative' or 'positive'
 
-##0. parse sequence file
-#	- for each sample ID, what is the:
-#		- file name
-#		- mode
-#	- batches of interest... in the sequence file?
+rimage = ''      # If peak-picking has already been done, can specify the Rimage in the summary file (like you can specify an OTU table)
+
+
+#%%#0. parse sequence file
 ## Sequence file path is specified in summary file
 # Note: first column should be the sample ID
 seq_df = pd.read_csv(sequence_file_path, sep=sequence_file_separator, index_col=0)
@@ -60,112 +56,74 @@ if raw_data:
 
 ##2.Grab the mzML files we'll need downstream for peak-picking
 # For negative mode, get the thresholded ones. For positive mode, just the normal mzML files
-neg_files = []
-pos_files = []
-if mode_to_process == 'neg':
-    neg_files = seq_df[seq_df['ionmode'] == 'negative']['file name']
-elif mode_to_process == 'pos':
-    pos_files = seq_df[seq_df['ionmode'] == 'positive']['file name']
+files = []
+
+if mode == 'negative':
+    files = seq_df[seq_df['ionmode'] == 'negative']['file name']
+    files = [os.path.join(data_directory, f) + '.threshold1000.mzML' for f in files]
+elif mode == 'positive':
+    files = seq_df[seq_df['ionmode'] == 'positive']['file name']
+    files = [os.path.join(data_directory, f) + '.mzML' for f in files]
 else:
-    neg_files = seq_df[seq_df['ionmode'] == 'negative']['file name']
-    pos_files = seq_df[seq_df['ionmode'] == 'positive']['file name']
+    raise NameError('No mode specified. Cannnot process files.')
 
-# Make sure file names point to full path of file
-neg_files = [os.path.join(data_directory, f) + '.mzML' for f in neg_files]
-pos_files = [os.path.join(data_directory, f) + '.mzML' for f in pos_files]
-
-# Get the thresholded files for negative mode processing
-neg_files = [f.rsplit('.',1)[0] + '.threshold1000.' + f.rsplit('.',1)[-1] for f in neg_files]
 
 ## 3. Peak picking
 # Params is a dictionary of paramters to give to xcms() code
 # TODO: add this as a user-specifiable input, from parsing summary file. Below are the defaults
-neg_params = {}
-neg_params['ppm'] = 2
-neg_params['snthresh'] = 10
-neg_params['prefilter_min'] = 5
-neg_params['prefilter_max'] = 1000
-neg_params['integrate'] = 2
-neg_params['peakwidth_min'] = 20
-neg_params['peakwidth_max'] = 60
-neg_params['noise'] = 1000
+params = {}
+if mode == 'neg':
+    params['ppm'] = 2
+    params['snthresh'] = 10
+    params['prefilter_min'] = 5
+    params['prefilter_max'] = 1000
+    params['integrate'] = 2
+    params['peakwidth_min'] = 20
+    params['peakwidth_max'] = 60
+    params['noise'] = 1000
+elif mode == 'pos':
+    params['ppm'] = 3
+    params['snthresh'] = 10
+    params['prefilter_min'] = 5
+    params['prefilter_max'] = 1000
+    params['integrate'] = 2
+    params['peakwidth_min'] = 20
+    params['peakwidth_max'] = 60
+    params['noise'] = 1000
 
-pos_params = {}
-pos_params['ppm'] = 3
-pos_params['snthresh'] = 10
-pos_params['prefilter_min'] = 5
-pos_params['prefilter_max'] = 1000
-pos_params['integrate'] = 2
-pos_params['peakwidth_min'] = 20
-pos_params['peakwidth_max'] = 60
-pos_params['noise'] = 1000
-
-# If no Rimage is specified (or if an Rimage is specified, but no correct mode is specified), do peak picking:
-if (rimage and mode_to_process != 'neg' and mode_to_process != 'pos') or (not rimage):
+# If no Rimage is specified, do peak picking:
+if not rimage:
     print('[[Peak Picking]] No Rimage specified. Picking peaks.')
     # Pick peaks for one or both modes
-    if mode_to_process == 'neg':
+    if mode == 'negative':
         print('[[Peak Picking]] Picking peaks in negative mode...')
-        mtab.pick_peaks(neg_files, 'neg', neg_params, working_directory)
+        rimage = mtab.pick_peaks(files, 'neg', params, working_directory)
         print('[[Peak Picking]] Picking peaks in negative mode complete.')
-    elif mode_to_process == 'pos':
+    elif mode == 'positive':
         print('[[Peak Picking]] Picking peaks in positive mode...')
-        mtab.pick_peaks(pos_files, 'pos', pos_params, working_directory)
+        rimage = mtab.pick_peaks(files, 'pos', params, working_directory)
         print('[[Peak Picking]] Picking peaks in positive mode complete.')
-    else:
-        print('[[Peak Picking]] Picking peaks in negative mode...')
-        mtab.pick_peaks(neg_files, 'neg', neg_params, working_directory)
-        print('[[Peak Picking]] Picking peaks in negative mode complete.')
-        print('[[Peak Picking]] Picking peaks in positive mode...')
-        mtab.pick_peaks(pos_files, 'pos', pos_params, working_directory)
-        print('[[Peak Picking]] Picking peaks in positive mode complete.')
+    
+## TODO: Update summary_file to add Rimage that results from this peak picking
+# update.SummaryFile(rimage)
 
 ## 4. Align peaks (per batch)
 
-# 4.1 read in the batches from the sequence file
-# batches are comma-separated on the "batches" column
-
-## Create dictionary of batches for each sample. s2b[sample] = [batches that sample is in]
-s2b = {key: value for key, value in zip(seq_df.index, seq_df['batches'])}
-batches = []
-for s in s2b:
-    if isinstance(s2b[s], str):
-        s2b[s] = [i.strip() for i in s2b[s].strip().split(',')]
-    else:
-        s2b[s] = [i.strip() for i in str(s2b[s]).strip().split(',')]
-    batches = batches + s2b[s]
-    
-# nan and 0 are not valid batches, and will be skipped
-batches = list(set(batches))
-if '0' in batches:
-    batches.remove('0')
-if 'nan' in batches:
-    batches.remove('nan')
-
-print('[[Align peaks]] Aligning peaks for ' + str(len(batches)) + ' batches...')
-## Create dictionary with samples in each batch b2s[batch] = [samples in that batch]
-b2s = {}
-for batch in batches:
-    b2s[batch] = [s for s in s2b if batch in s2b[s]]
-    
-## Track the mode of each batch
-b2m = {}
-for batch in batches:
-    b2m[batch] = [seq_df.loc[s, 'ionmode'] for s in s2b if batch in s2b[s]]
-    if b2m[batch].count(b2m[batch][0]) != len(b2m[batch]):
-        print('[[Align peaks]] Batch ' + batch + ' contains mixed negative and positive ion modes. Skipping batch.')
-        del b2m[batch]
-        del b2s[batch]
+# 4.1 read in the batches to be aligned from the sequence file
+# batches are comma-separated on the "batches" column of seq_df
+batches, b2s = mtab.extract_batches(seq_df, mode)
 
 ## Align peaks in each batch
 # This R code aligns peaks, fills peaks, and finds adducts and isotopes
 # It writes a aligned_peaks file and a all_peaks file
 # The python helper function should also write a batch_description file w/ samples in batch, batch mode, parameters used to align, and output file names
+print('[[Align peaks]] Aligning peaks for ' + str(len(batches)) + ' batches...')
 
 for batch in batches:
-    mode = b2m[batch]
     samples = b2s[batch]
+    print('[[Align peaks]] Aligning batch ' + batch + ', containing samples ' + ','.join(samples)+ '...')
     mtab.align_peaks(batch, samples, mode, sequence_file_path)
+    print('[[Align peaks]] Aligning batch ' + batch + ', containing samples ' + ','.join(samples)+ '. Complete.')
 
 
 ## 4. Aligning peaks (per batch)	

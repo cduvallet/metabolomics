@@ -24,25 +24,31 @@ option_list = list(
               help='noise value for xcmsSet'),
   make_option(c('-f', '--fnames'), default='', type='character',
               help='path to file containing full paths to files to be run through xcsmSet'),
-  make_option(c('-w', '--wdir'), default='', type='character',
-              help='full path to working directory')
+  make_option(c('--pdf'), default='picked_peaks.pdf', type='character',
+              help='name of pdf file to write CentWave peak picking diagnostics to'),
+  make_option(c('--rimage'), default='picked_peaks.Rimage', type='character',
+                help='name of Rimage file to save picked peaks')
 )
 
 args = parse_args(OptionParser(option_list=option_list), args=commandArgs(TRUE))
-print(args)
+
 ### Need full path to these data files...
 mzdatafiles <- read.csv(args$fnames, stringsAsFactors=FALSE)$fnames
-print(mzdatafiles)
+
 ## How many CPU cores has your machine (or cluster) ?
 nSlaves=4
 
-#pdf(file = "test.pdf") #if want PDF file, add this after mzdiff: ,sleep = 0.0001 and uncomment dev.off()
+pdf(file = args$pdf) #if want PDF file, add this after mzdiff: ,sleep = 0.0001 and uncomment dev.off()
 
 #For negative ion mode: ppm = 2 seems best
 #For positive ion mode: ppm = 3 seems best
-xs<-xcmsSet(mzdatafiles, method = "centWave",ppm = args$ppm ,snthresh = args$snthresh,
-            prefilter =  c(args$filterMin, args$filterMax), mzCenterFun = "wMean",integrate = args$integrate, 
-            verbose.columns = TRUE, peakwidth=c(args$peakMin,args$peakMax), fitgauss= TRUE, noise = args$noise, 
-            mzdiff=-0.005,nSlaves=nSlaves)#, sleep = 0.00001)
-save.image('test2.Rimage')
-#dev.off()
+xs<-xcmsSet(mzdatafiles, method="centWave", ppm=args$ppm ,snthresh=args$snthresh,
+            prefilter =  c(args$filterMin, args$filterMax), mzCenterFun="wMean",integrate=args$integrate, 
+            verbose.columns=TRUE, peakwidth=c(args$peakMin,args$peakMax), fitgauss=TRUE, noise=args$noise, 
+            mzdiff=-0.005, nSlaves=nSlaves, sleep=0.00001)
+dev.off()
+
+# Define the samples in xs$phenoData using sampclass(xs)
+sampclass(xs) = mzdatafiles
+
+save.image(args$rimage)

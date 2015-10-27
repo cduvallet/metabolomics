@@ -3,3 +3,5 @@
 *.mzML
 *.R~
 *.py~
+*.pyc
+*.pyc
