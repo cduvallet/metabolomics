@@ -23,17 +23,19 @@ import preprocessing_metab as mtab
 import pandas as pd
 import os
 
-working_directory = r'C:\Users\Claire\Documents\GitHub\metabolomics'
+working_directory = '/home/claire/metabolomics_test'
 
 ## Parse summmary file. Get the following params:
-sequence_file_path = r'C:\Users\Claire\Documents\GitHub\metabolomics\test_data\test_sequence_file.csv'
+sequence_file_path = '/home/claire/metabolomics_test/test_data/test_sequence_file2.csv'
 sequence_file_separator = ','    # deafults to ',' if not specified
-data_directory = r'C:\Users\Claire\Documents\GitHub\metabolomics\test_data'    # defaults to working_directory if not specified
+data_directory = '/home/claire/metabolomics_test/test_data'    # defaults to working_directory if not specified
 raw_data = False
 mode = 'negative'     # This can be either 'neg' or 'pos' 
                  # WHen reading summary file, if it's given as any permutation of neg/negative or pos/positive, return the lowercase version: either 'negative' or 'positive'
 
-rimage = ''      # If peak-picking has already been done, can specify the Rimage in the summary file (like you can specify an OTU table)
+# If you provide an Rimage file, your sequence file should contain only the samples in this Rimage file
+# The rimage file should have a xcmsSet object called xs
+rimage = '/home/claire/metabolomics_test/metabolomics_test.picked_peaks.negative.Rimage' #'/home/claire/metabolomics_test/metabolomics_test.picked_peaks.neg.Rimage'      # If peak-picking has already been done, can specify the Rimage in the summary file (like you can specify an OTU table)
 
 
 #%%#0. parse sequence file
@@ -56,23 +58,23 @@ if raw_data:
 
 ##2.Grab the mzML files we'll need downstream for peak-picking
 # For negative mode, get the thresholded ones. For positive mode, just the normal mzML files
-files = []
-
-if mode == 'negative':
-    files = seq_df[seq_df['ionmode'] == 'negative']['file name']
-    files = [os.path.join(data_directory, f) + '.threshold1000.mzML' for f in files]
-elif mode == 'positive':
-    files = seq_df[seq_df['ionmode'] == 'positive']['file name']
-    files = [os.path.join(data_directory, f) + '.mzML' for f in files]
-else:
-    raise NameError('No mode specified. Cannnot process files.')
+#files = []
+#
+#if mode == 'negative':
+#    files = seq_df[seq_df['ionmode'] == 'negative']['file name']
+#    files = [os.path.join(data_directory, f) + '.threshold1000.mzML' for f in files]
+#elif mode == 'positive':
+#    files = seq_df[seq_df['ionmode'] == 'positive']['file name']
+#    files = [os.path.join(data_directory, f) + '.mzML' for f in files]
+#else:
+#    raise NameError('No mode specified. Cannnot process files.')
 
 
 ## 3. Peak picking
 # Params is a dictionary of paramters to give to xcms() code
 # TODO: add this as a user-specifiable input, from parsing summary file. Below are the defaults
 params = {}
-if mode == 'neg':
+if mode == 'negative':
     params['ppm'] = 2
     params['snthresh'] = 10
     params['prefilter_min'] = 5
@@ -81,7 +83,7 @@ if mode == 'neg':
     params['peakwidth_min'] = 20
     params['peakwidth_max'] = 60
     params['noise'] = 1000
-elif mode == 'pos':
+elif mode == 'positive':
     params['ppm'] = 3
     params['snthresh'] = 10
     params['prefilter_min'] = 5
@@ -93,48 +95,60 @@ elif mode == 'pos':
 
 # If no Rimage is specified, do peak picking:
 if not rimage:
-    print('[[Peak Picking]] No Rimage specified. Picking peaks.')
-    # Pick peaks for one or both modes
-    if mode == 'negative':
-        print('[[Peak Picking]] Picking peaks in negative mode...')
-        rimage = mtab.pick_peaks(files, 'neg', params, working_directory)
-        print('[[Peak Picking]] Picking peaks in negative mode complete.')
-    elif mode == 'positive':
-        print('[[Peak Picking]] Picking peaks in positive mode...')
-        rimage = mtab.pick_peaks(files, 'pos', params, working_directory)
-        print('[[Peak Picking]] Picking peaks in positive mode complete.')
+    print('[[Peak Picking]] No Rimage specified. Picking peaks in ' + mode + ' mode...')
+    rimage, proc_file = mtab.pick_peaks(seq_df, mode, params, data_directory, working_directory)
+    print('[[Peak Picking]] Picking peaks in ' + mode + ' mode complete.')
+else:
+    # Create a proc_file from the seq_df
+    proc_file = os.path.join(working_directory, working_directory.split('/')[-1] + '.processing_tracker.' + mode + '.txt')
+    proc_df = seq_df[seq_df['ionmode'] == 'negative']
+    proc_df['rimage'] = len(proc_df.index) * [rimage]
+    proc_df.to_csv(proc_file, sep='\t')
+
+## If no Rimage is specified, do peak picking:
+#if not rimage:
+#    print('[[Peak Picking]] No Rimage specified. Picking peaks.')
+#    # Pick peaks for one or both modes
+#    if mode == 'negative':
+#        print('[[Peak Picking]] Picking peaks in negative mode...')
+#        rimage = mtab.pick_peaks(seq_df, 'negative', params, data_directory, working_directory)
+#        print('[[Peak Picking]] Picking peaks in negative mode complete.')
+#    elif mode == 'positive':
+#        print('[[Peak Picking]] Picking peaks in positive mode...')
+#        rimage = mtab.pick_peaks(files, 'positive', params, working_directory)
+#        print('[[Peak Picking]] Picking peaks in positive mode complete.    
     
 ## TODO: Update summary_file to add Rimage that results from this peak picking
 # update.SummaryFile(rimage)
 
-## 4. Align peaks (per batch)
-
-# 4.1 read in the batches to be aligned from the sequence file
-# batches are comma-separated on the "batches" column of seq_df
+### 4. Align peaks (per batch)
+#
+## 4.1 read in the batches to be aligned from the sequence file
+## batches are comma-separated on the "batches" column of seq_df
 batches, b2s = mtab.extract_batches(seq_df, mode)
-
-## Align peaks in each batch
-# This R code aligns peaks, fills peaks, and finds adducts and isotopes
-# It writes a aligned_peaks file and a all_peaks file
-# The python helper function should also write a batch_description file w/ samples in batch, batch mode, parameters used to align, and output file names
-print('[[Align peaks]] Aligning peaks for ' + str(len(batches)) + ' batches...')
-
-for batch in batches:
+#
+### Align peaks in each batch
+## This R code aligns peaks, fills peaks, and finds adducts and isotopes
+## It writes a aligned_peaks file and a all_peaks file
+## The python helper function should also write a batch_description file w/ samples in batch, batch mode, parameters used to align, and output file names
+#print('[[Align peaks]] Aligning peaks for ' + str(len(batches)) + ' batches...')
+#
+for batch in batches[0:2]:
     samples = b2s[batch]
     print('[[Align peaks]] Aligning batch ' + batch + ', containing samples ' + ','.join(samples)+ '...')
-    mtab.align_peaks(batch, samples, mode, sequence_file_path)
+    mtab.align_peaks(rimage, batch, samples, mode, proc_file, working_directory)
     print('[[Align peaks]] Aligning batch ' + batch + ', containing samples ' + ','.join(samples)+ '. Complete.')
 
-
-## 4. Aligning peaks (per batch)	
-#4. Align peaks: For each batch specified in summary file (somehow):
-#	- Load in the Rimage
-#	- select a subset of xs that contains only that batch of samples
-#	- run that batch through retcor.obiwarp and group.density stuffs
-#4.2 Find adducts and isotopes
-#	- this requires some parameters that depend on the mode!
-#4.3 save aligned file and all_peaks file
-#- batch samples will be specified as an input to #4.
-#	- maybe I will write a file for each batch that states: which samples are in that batch, what the mode is, and what the output files are called
-
-
+#rimage, batch, samples, mode, proc_file
+### 4. Aligning peaks (per batch)	
+##4. Align peaks: For each batch specified in summary file (somehow):
+##	- Load in the Rimage
+##	- select a subset of xs that contains only that batch of samples
+##	- run that batch through retcor.obiwarp and group.density stuffs
+##4.2 Find adducts and isotopes
+##	- this requires some parameters that depend on the mode!
+##4.3 save aligned file and all_peaks file
+##- batch samples will be specified as an input to #4.
+##	- maybe I will write a file for each batch that states: which samples are in that batch, what the mode is, and what the output files are called
+#
+#

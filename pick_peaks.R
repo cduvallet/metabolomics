@@ -27,13 +27,16 @@ option_list = list(
   make_option(c('--pdf'), default='picked_peaks.pdf', type='character',
               help='name of pdf file to write CentWave peak picking diagnostics to'),
   make_option(c('--rimage'), default='picked_peaks.Rimage', type='character',
-                help='name of Rimage file to save picked peaks')
+              help='name of Rimage file to save picked peaks'),
+  make_option(c('--sids'), default='', type='character',
+              help='file path to sample IDs')
 )
 
 args = parse_args(OptionParser(option_list=option_list), args=commandArgs(TRUE))
 
 ### Need full path to these data files...
 mzdatafiles <- read.csv(args$fnames, stringsAsFactors=FALSE)$fnames
+print(mzdatafiles)
 
 ## How many CPU cores has your machine (or cluster) ?
 nSlaves=4
@@ -49,6 +52,8 @@ xs<-xcmsSet(mzdatafiles, method="centWave", ppm=args$ppm ,snthresh=args$snthresh
 dev.off()
 
 # Define the samples in xs$phenoData using sampclass(xs)
-sampclass(xs) = mzdatafiles
-
+samples = read.csv(args$sids, stringsAsFactors=FALSE)$sids
+sampclass(xs) = samples
+print(samples)
+print(args$rimage)
 save.image(args$rimage)
