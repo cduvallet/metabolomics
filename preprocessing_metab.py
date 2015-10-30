@@ -68,8 +68,8 @@ def pick_peaks(seq_df, mode, params, data_directory, working_directory):
     tmp_seq_df['mzML files'] = files  
     tmp_seq_df['pick_peaks_rimage'] = len(files)*[rimage_file]
     print(tmp_seq_df)
-    proc_tracker = os.path.join(working_directory, working_directory.split('/')[-1] + '.processing_tracker.' + mode + '.txt')
     
+    proc_tracker = os.path.join(working_directory, working_directory.split('/')[-1] + '.processing_tracker.' + mode + '.txt')
     tmp_seq_df.to_csv(proc_tracker, sep='\t')
     
     return rimage_file, proc_tracker
@@ -81,6 +81,10 @@ def align_peaks(rimage, batch, samples, mode, proc_file, working_directory):
     # batch is the name of the batch to process
     # samples is a list of samples in that batch. Should be the sample IDs.
     # proc_file is a copy of the sequence file for just the files in the respective rimage file. it has extra columns indicating whether peaks have been picked, and what batches have been finished
+
+    ## Define output file names
+    all_peaks = os.path.join(working_directory, working_directory.split('/')[-1] + '.all_peaks.batch_' + batch + '.' + mode + '.csv')
+    aligned_table = os.path.join(working_directory, working_directory.split('/')[-1] + '.aligned_table.batch_' + batch + '.' + mode + '.csv')
 
     ## Read in the proc_file
     proc_df = pd.read_csv(proc_file, sep='\t', index_col=0)
@@ -94,18 +98,24 @@ def align_peaks(rimage, batch, samples, mode, proc_file, working_directory):
         for sid in proc_df.index:
             f.write(sid + '\t' + str(proc_df.loc[sid, 'batch ' + batch]) + '\n')            
     # The R script reads in this tmp_batch_index.txt file to get the classlist
+    # This file indicates (with 1's and 0's) which samples to align
 
-    all_peaks = os.path.join(working_directory, working_directory.split('/')[-1] + '.all_peaks.batch_' + batch + '.' + mode + '.csv')
-    aligned_table = os.path.join(working_directory, working_directory.split('/')[-1] + '.aligned_table.batch_' + batch + '.' + mode + '.csv')
-    os.system('Rscript align_peaks.R --rimage ' + rimage + ' --batch ' + tmp_file + ' --aligned ' + aligned_table + ' --allpeaks ' + all_peaks)
+    os.system('Rscript align_peaks.R --rimage ' + rimage + ' --batch ' + tmp_file + ' --mode ' + mode + 
+              ' --aligned ' + aligned_table + ' --allpeaks ' + all_peaks)
     
     # Update the processing tracker file
+    proc_df['batch ' + batch] = [aligned_table if s in samples else 0 for s in proc_df.index]
     proc_df.to_csv(proc_file, sep='\t')
     
     ## TODO: open the aligned feature table and replace the sample names (which are currently hte mzML files) with their sample ID (???)
+    aligned_df = pd.read_csv(aligned_table, sep=',')
+    new_cols = list(aligned_df.columns)
+    new_cols[9:9+len(samples)] = samples
+    aligned_df.columns = new_cols
+    aligned_df.to_csv(aligned_table + 'test', sep=',')
+
 
 #%%# Other helpful functions for metabolomics preprocessing
-   
 def extract_batches(seq_df, mode):
     # Extract the batches of samples we want to align.
     # Batches should be specified in the sequence file in the column 'batches'
