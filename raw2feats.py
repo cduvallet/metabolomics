@@ -31,12 +31,12 @@ sequence_file_path = '/home/claire/metabolomics_test/test_data/test_sequence_fil
 sequence_file_separator = ','    # deafults to ',' if not specified
 data_directory = '/home/claire/metabolomics_test/test_data'    # defaults to working_directory if not specified
 raw_data = False
-mode = 'negative'     # This can be either 'neg' or 'pos' 
+mode = 'positive'     # This can be either 'neg' or 'pos' 
                  # WHen reading summary file, if it's given as any permutation of neg/negative or pos/positive, return the lowercase version: either 'negative' or 'positive'
 
 # If you provide an Rimage file, your sequence file should contain only the samples in this Rimage file
 # The rimage file should have a xcmsSet object called xs
-rimage = '/home/claire/metabolomics_test/metabolomics_test.picked_peaks.negative.Rimage' #'/home/claire/metabolomics_test/metabolomics_test.picked_peaks.neg.Rimage'      # If peak-picking has already been done, can specify the Rimage in the summary file (like you can specify an OTU table)
+rimage = '/home/claire/metabolomics_test2/metabolomics_test2.picked_peaks.positive.Rimage' #'/home/claire/metabolomics_test/metabolomics_test.picked_peaks.neg.Rimage'      # If peak-picking has already been done, can specify the Rimage in the summary file (like you can specify an OTU table)
 
 
 #%%#0. parse sequence file
@@ -88,8 +88,8 @@ if not rimage:
 else:
     # Create a proc_file from the seq_df
     proc_file = os.path.join(working_directory, working_directory.split('/')[-1] + '.processing_tracker.' + mode + '.txt')
-    proc_df = seq_df[seq_df['ionmode'] == 'negative']
-    proc_df['rimage'] = len(proc_df.index) * [rimage]
+    proc_df = seq_df[seq_df['ionmode'] == mode]
+    proc_df['rimage'] = pd.Series(len(proc_df.index) * [rimage], index=proc_df.index)
     proc_df.to_csv(proc_file, sep='\t')
    
 ## TODO: Update summary_file to add Rimage that results from this peak picking
@@ -103,8 +103,9 @@ batches, b2s = mtab.extract_batches(seq_df, mode)
 ## Align peaks in each batch
 # This R code aligns peaks, fills peaks, and finds adducts and isotopes
 # It writes a aligned_peaks file and a all_peaks file, and updates the processing_file with the processed samples
-for batch in batches[0:2]:
+for batch in batches:
     samples = b2s[batch]
     print('[[Align peaks]] Aligning batch ' + batch + ', containing samples ' + ','.join(samples)+ '...')
     mtab.align_peaks(rimage, batch, samples, mode, proc_file, working_directory)
     print('[[Align peaks]] Aligning batch ' + batch + ', containing samples ' + ','.join(samples)+ '. Complete.')
+    

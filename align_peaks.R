@@ -8,7 +8,7 @@ option_list = list(
   make_option(c('-i', '--rimage'), default='', type='character',
               help='path to rimage file for aligning'),
   make_option(c("-b", "--batch"), default='', type='character',
-              help='path to file indicating which samples to aling. File should have sample names from rimage in one column and inbatch in the other (either 0 or 1)'),
+              help='path to file indicating which samples to align. File should have sample names from rimage in one column and inbatch in the other (either 0 or 1)'),
   make_option(c('--allpeaks'), default='', type='character',
               help='path to file containing all the peaks in individual samples'),
   make_option(c('-o', '--aligned'), default='', type='character',
@@ -36,7 +36,7 @@ load(args$rimage)
 ## Take just the subset of xs for the samples in this batch
 sampclass(xs) = classes
 xsSubset = split(xs, classes)[['1']]
-nsamples = length(xsSubset@filepaths)
+nSamples = length(xsSubset@filepaths)
 #print(xsSubset)
 
 ## Align peaks
@@ -74,7 +74,7 @@ xsaC = groupCorr(xsaFI, cor_eic_th=0.75, pval=0.05, graphMethod="hcs",
 if (mode == 'negative'){
   file = system.file("rules/primary_adducts_neg.csv", package="CAMERA")
 } else if (mode == 'positive'){
-  file = system.file('rules/primary_adducts_post.csv', package='CAMERA')
+  file = system.file('rules/primary_adducts_pos.csv', package='CAMERA')
 }
   
 rules = read.csv(file)
