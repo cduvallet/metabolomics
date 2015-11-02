@@ -35,7 +35,7 @@ def pick_peaks(seq_df, mode, params, data_directory, working_directory):
         files = [os.path.join(data_directory, f) + '.mzML' for f in files]
     else:
         raise NameError('No mode specified. Cannnot process files.')
-
+#    print(files)
     
     # Write the file names to a file so that R can read it in
     mzdatafiles = os.path.join(working_directory, 'mzdatafiles.' + mode + '.txt')
@@ -68,8 +68,7 @@ def pick_peaks(seq_df, mode, params, data_directory, working_directory):
     tmp_seq_df = copy(seq_df[seq_df['ionmode'] == mode])
     tmp_seq_df['mzML files'] = files  
     tmp_seq_df['pick_peaks_rimage'] = len(files)*[rimage_file]
-    print(tmp_seq_df)
-    
+        
     proc_tracker = os.path.join(working_directory, working_directory.split('/')[-1] + '.processing_tracker.' + mode + '.txt')
     tmp_seq_df.to_csv(proc_tracker, sep='\t')
     

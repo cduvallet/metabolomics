@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Oct 21 21:16:48 2015
 
@@ -13,7 +12,6 @@ Created on Wed Oct 21 21:16:48 2015
 # for now, don't worry about what flags are read by Master vs. raw2feats.py
 # in this code, identify where users inputs should go (i.e. readouts from summary file, sequence file, or defaults)
 
-
 ## preprocessing_metabolomics.py contains the actual functions that do the heavy lifting
 # for example, align_features(), pick_peaks(), etc will be in this script
 # The inputs to those scripts are parsed by raw2feats.py and given as inputs to these functions
@@ -21,23 +19,84 @@ Created on Wed Oct 21 21:16:48 2015
 #%%
 import preprocessing_metab as mtab
 import pandas as pd
-import os
+import os, sys
+from optparse import OptionParser
+from SummaryParserMtab import *
 
-# Like in the 16S proc, working_directory reflects what is in the DATASET_ID in the summary_file.txt
-working_directory = '/home/claire/metabolomics_test2'
+## Have the same format as raw2otu.py in terms of interfacing with directories, etc
+usage = "%prog -i INPUT_DIR -o OUTPUT_DIR_FULL_PATH"
+parser = OptionParser(usage)
+parser.add_option("-i", "--input_dir", type="string", dest="input_dir")
+parser.add_option("-o", "--output_dir", type="string", dest="output_dir")
+parser.add_option("-r", "--raw_data", dest="raw_data", default='True', help='if True, raw data needs to be converted to mzML using MSConvert. If False, assumes mzML files already exist')
+(options, args) = parser.parse_args()
 
-## Parse summmary file. Get the following params:
-sequence_file_path = '/home/claire/metabolomics_test/test_data/test_sequence_file2.csv'
-sequence_file_separator = ','    # deafults to ',' if not specified
-data_directory = '/home/claire/metabolomics_test/test_data'    # defaults to working_directory if not specified
-raw_data = False
-mode = 'positive'     # This can be either 'neg' or 'pos' 
-                 # WHen reading summary file, if it's given as any permutation of neg/negative or pos/positive, return the lowercase version: either 'negative' or 'positive'
 
-# If you provide an Rimage file, your sequence file should contain only the samples in this Rimage file
-# The rimage file should have a xcmsSet object called xs
-rimage = '/home/claire/metabolomics_test2/metabolomics_test2.picked_peaks.positive.Rimage' #'/home/claire/metabolomics_test/metabolomics_test.picked_peaks.neg.Rimage'      # If peak-picking has already been done, can specify the Rimage in the summary file (like you can specify an OTU table)
+if( not options.input_dir ):
+    parser.error("No data directory specified.")
 
+# Parse summary file for dataset ID
+summary_file = os.path.join(options.input_dir, 'summary_file.txt')
+summary_obj = SummaryParser(summary_file)
+summary_obj.ReadSummaryFile()
+dataset_ID = summary_obj.datasetID
+
+# Pipe stdour and stderr to logfiles in the new directory
+#sys.stdout = open('/home/ubuntu/logs/stdout_' + dataset_ID + '_proc_mtab.log','w')
+#sys.stderr = open('/home/ubuntu/logs/stderr_' + dataset_ID + '_proc_mtab.log','w')
+#@ THOMAS: the following commented lines give me an error. Not sure what package it needs/what it does?
+#def warning(*objs):
+#    print("WARNING: ", *objs, file=sys.stderr)
+
+# If no output directory specified, default to $home/proc/
+homedir = os.getenv("HOME")
+if( not options.output_dir ):
+    print("No output directory name specified.  Writing to " + homedir + "/proc/ by default.")
+    options.output_dir = homedir + '/proc/' + dataset_ID + '_proc_mtab'
+
+# Make a directory for the mtab processing results
+working_directory = options.output_dir
+try:
+    os.system('mkdir ' + working_directory)
+except:
+    print("Processing directory for this dataset already exists.  Overwriting its contents.")
+
+## Parse summmary file.
+# Check for presence of sequence file - raise error if no sequence file provided
+try:
+    sequence_file_path = os.path.join(options.input_dir, summary_obj.attribute_value_mtab['SEQUENCE_FILE'])
+except:
+    raise NameError('No sequence file specified.')
+
+# Sequence file separator indicates whether sequence is csv or tab-delimited. Defaults to csv.
+try:
+    sequence_file_separator = summary_obj.attribute_value_mtab['SEQUENCE_FILE_SEPARATOR']
+except:
+    sequence_file_separator = ','
+
+# If a separate data directory is given, otherwise defaults to input directory
+try:
+    data_directory = summary_obj.attribute_value_mtab['DATA_DIRECTORY']
+except:
+    data_directory = options.input_dir
+
+# Get whether input is raw data or already converted mzML files
+raw_data = options.raw_data
+
+# Get mode. Summary file returns either 'negative' or 'positive', regardless of whether input was pos/neg/positive/negative/, etc
+try:
+    mode = summary_obj.attribute_value_mtab['MODE']
+except:
+    raise NameError('No mode specified.')
+if mode != 'negative' and mode != 'positive':
+    raise NameError('Incorrect mode specified. Valid options are "negative" and "positive"')
+
+# Get Rimage file if it is given. If an Rimage file is given, your sequence file should only contain the samples in this Rimage file (??? TODO ???)
+# The Rimage file should have an xcmsSet object called xs that contains the picked peaks from your mzML files
+try:
+    rimage = os.path.join(options.input_dir, summary_obj.attribute_value_mtab['RIMAGE_FILE'])
+except:
+    rimage = ''
 
 #%%#0. parse sequence file
 ## Sequence file path is specified in summary file
@@ -52,7 +111,7 @@ for col in required_cols:
         raise NameError('Required column ' + col + ' not found in sequence file')
 
 #1. MSConvert (if raw data given)
-if raw_data:
+if raw_data == 'True':
     print('Need to convert to mzML files. Running MSConvert')
     # Run MSConvert
     # TODO: Thomas - what's the best way to do that? On another node? we can call MSConvert from command line on a windows node
@@ -85,15 +144,16 @@ if not rimage:
     print('[[Peak Picking]] No Rimage specified. Picking peaks in ' + mode + ' mode...')
     rimage, proc_file = mtab.pick_peaks(seq_df, mode, params, data_directory, working_directory)
     print('[[Peak Picking]] Picking peaks in ' + mode + ' mode complete.')
+    summary_obj.attribute_value_mtab['RIMAGE_FILE'] = rimage
 else:
+    print('[[Peak picking]] Rimage ' + rimage + ' specified. Continuing with alignment')
+    # Copy the rimage file into the proc directory
+    os.system('cp ' + rimage + ' ' + working_directory)
     # Create a proc_file from the seq_df
     proc_file = os.path.join(working_directory, working_directory.split('/')[-1] + '.processing_tracker.' + mode + '.txt')
     proc_df = seq_df[seq_df['ionmode'] == mode]
     proc_df['rimage'] = pd.Series(len(proc_df.index) * [rimage], index=proc_df.index)
     proc_df.to_csv(proc_file, sep='\t')
-   
-## TODO: Update summary_file to add Rimage that results from this peak picking
-# update.SummaryFile(rimage)
 
 ## 4. Align peaks (per batch)
 # 4.1 read in the batches to be aligned from the sequence file
@@ -109,3 +169,5 @@ for batch in batches:
     mtab.align_peaks(rimage, batch, samples, mode, proc_file, working_directory)
     print('[[Align peaks]] Aligning batch ' + batch + ', containing samples ' + ','.join(samples)+ '. Complete.')
     
+summary_obj.attribute_value_mtab['PROCESSED'] = 'True'
+summary_obj.WriteSummaryFile()
