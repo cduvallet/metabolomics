@@ -22,7 +22,7 @@ for pathdir, dirnames, filenames in os.walk(raw_data_dir):
     for f in filenames:
         raw_files.append(os.path.join(pathdir, f))
 
-for f in raw_files[0:2]:
+for f in raw_files:
     #Run with thresholding
     cmdstr = msconvert + ' --mzML --filter "peakPicking true 1-"  --filter "threshold absolute 1000 most-intense" -o '\
     + out_data_dir + ' --outfile ' + f.split('\\')[-1].split('.')[0] + '.threshold1000.mzML ' + f
