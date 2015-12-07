@@ -1,9 +1,9 @@
+## Uses the xcmsSet function to pick peaks from all files given
+# Interfaces with preprocessing_mtab.py
+# Code adapated from Krista Longnecker by Claire Duvallet
 
 library(optparse)
 library(xcms)
-
-# Uses the xcmsSet function to pick peaks from all files given
-# Takes as input the following parameters
 
 option_list = list(
   make_option(c("-p", "--ppm"), default=2, type='integer',

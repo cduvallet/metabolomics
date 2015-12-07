@@ -9,13 +9,30 @@ from copy import copy
 import pandas as pd
 
 #%%# Wrapper functions for metabolomics pre processing steps
-def pick_peaks(seq_df, mode, params, data_directory, working_directory):
-    # Wrapper for call to R code that uses xcms() to pick peaks in all files
-    # fnames is a list with the names of all files to be analyzed
-    # params is a dictionary of parameters to give to xcsm() code
-    # working_directory and mode creates the rimage_file name the rimage to be saved
-    # data_directory is where the mzML files are located
-    # seq_df has mode and file name for each sample
+def pick_peaks(seq_df, mode, params, data_directory, working_directory, dataset_ID):
+    """
+    Picks peaks for all files in seq_df with specified mode. 
+    
+    Inputs:
+    =======
+    - seq_df:              (pandas dataframe) sequence file read into dataframe.
+    - mode:                (str) ionization mode, either 'positive' or 'negative'
+    - params:              (dict) dictionary containing the parameters for peak picking
+    - data_directory:      (str) path to directory containing files in seq_df
+    - working_directory:   (str) path to directory where rimage file will be save
+    
+    Returns:
+    ========
+    - rimage_file:    (str) full path of saved Rimage file which contains xs object with picked peaks
+    - proc_tracker:   (str) full path of file containing edited seq_df with paths to files containing completed analyses
+
+    Creates:
+    ========
+    - <dataset_ID>.picked_peaks.<mode>.pdf         (file) file containing pdf output from xcmsSet
+    - <dataset_ID>.picked_peaks.<mode>.Rimage      (file) Rimage file contaiing xs xcmsSet object with picked peaks
+    - <dataset_ID>.processing_tracker.<mode>.txt   (file) tab-delimited file with subset of seq_df with specified mode, tracks processing done
+
+    """
 
     ## Get the parameters for later call to Rscript
     ppm = str(params['ppm'])
@@ -28,15 +45,17 @@ def pick_peaks(seq_df, mode, params, data_directory, working_directory):
     noise = str(params['noise'])
         
     ## Extract all the right mzML file names
+    # All files with the given mode that are in the sequence file are assumed to be present in the data_directory
+    # Negative mode files have suffix *.threshold1000.mzML
+    # Positive mode files have suffix *.mzML
     if mode == 'negative':
-        files = seq_df[seq_df['ionmode'] == 'negative']['file name']
+        files = seq_df[seq_df['ion mode'] == 'negative']['file name']
         files = [os.path.join(data_directory, f) + '.threshold1000.mzML' for f in files]
     elif mode == 'positive':
-        files = seq_df[seq_df['ionmode'] == 'positive']['file name']
+        files = seq_df[seq_df['ion mode'] == 'positive']['file name']
         files = [os.path.join(data_directory, f) + '.mzML' for f in files]
     else:
         raise NameError('No mode specified. Cannnot process files.')
-#    print(files)
     
     ## Write the file names to a file so that R can read it in
     mzdatafiles = os.path.join(working_directory, 'mzdatafiles.' + mode + '.txt')
@@ -45,15 +64,15 @@ def pick_peaks(seq_df, mode, params, data_directory, working_directory):
         f.write('\n'.join(files))
     
     ## Write the sample IDs to a file so that R can read it in and label the xcmsSet object with them
-    sids = seq_df[seq_df['ionmode'] == mode].index
+    sids = seq_df[seq_df['ion mode'] == mode].index
     sidsfile = os.path.join(working_directory, 'sampleIDs.' + mode + '.txt')
     with open(sidsfile, 'w') as f:
         f.write('sids\n')
         f.write('\n'.join(sids))
     
     ## Define the rimage and pdf files to save results of peak-picking
-    rimage_file = os.path.join(working_directory, working_directory.split('/')[-1] + '.picked_peaks.' + mode + '.Rimage')
-    pdf_file = os.path.join(working_directory,working_directory.split('/')[-1] + '.picked_peaks.' + mode + '.pdf')
+    rimage_file = os.path.join(working_directory, dataset_ID + '.picked_peaks.' + mode + '.Rimage')
+    pdf_file = os.path.join(working_directory, dataset_ID + '.picked_peaks.' + mode + '.pdf')
     
     ## Call R script that's a wrapper to xcsm() peak picking
     # This R file uses xcmsSet to pick peaks from the mzML files specified in mzdatafiles.<mode>.txt file, created above.
@@ -67,26 +86,38 @@ def pick_peaks(seq_df, mode, params, data_directory, working_directory):
     os.system(cmdstr)
     
     ## Track processing that's been done on samples by writing a new sequence file for just these samples
-    tmp_seq_df = copy(seq_df[seq_df['ionmode'] == mode])
+    tmp_seq_df = copy(seq_df[seq_df['ion mode'] == mode])
     tmp_seq_df['mzML files'] = files  
     tmp_seq_df['pick_peaks_rimage'] = len(files)*[rimage_file]
         
-    proc_tracker = os.path.join(working_directory, working_directory.split('/')[-1] + '.processing_tracker.' + mode + '.txt')
+    proc_tracker = os.path.join(working_directory, dataset_ID + '.processing_tracker.' + mode + '.txt')
     tmp_seq_df.to_csv(proc_tracker, sep='\t')
     
     return rimage_file, proc_tracker
 
-def align_peaks(rimage, batch, samples, mode, proc_file, working_directory):
-    # Wrapper to R script that aligns peaks, fills peaks, and finds adducts and isotopes
-    # rimage is the full path to the Rimage file that contains the xcmsSet object with all the picked peaks. This object should be named xs.
-    # rimage file should be for the right mode (duh), so the xs object in it should have all of the mzML files from the respective pick_peaks call
-    # batch is the name of the batch to process
-    # samples is a list of samples in that batch. Should be the sample IDs as found in the index of the sequence file dataframe (seq_df)
-    # proc_file is a file which tracks the processing that's been done. It's a copy of the sequence file that contains just the files in the respective rimage file. it has extra columns indicating whether peaks have been picked, and what batches have been finished
+def align_peaks(rimage, batch, samples, mode, proc_file, working_directory, dataset_ID):
+    """
+    Aligns peaks for the samples in the given batch. 
+    
+    Inputs:
+    =======
+    - rimage:              (str) path to Rimage file containing xs xcmsSet object with picked peaks
+    - batch:               (str) name of current batch being processed
+    - samples:             (list) sample IDs of samples in batch. Should be as in the first column of the sequence file (index of seq_df)
+    - mode:                (str) 'positive' or 'negative'
+    - proc_file:           (str) path to file that is tracking the processing done so far
+    - working_directory:   (str) path to working directory where files will be saved
+        
+    Creates:
+    ========
+    - <dataset_ID>.all_peaks.batch_<batch>.<mode>.csv        (file) comma-delimited file with all peaks for all samples in batch
+    - <dataset_ID>.aligned_table.batch_<batch>.<mode>.csv    (file) comma-delimiated file with aligned peaks, isotopes, and adducts for all samples in batch
+    
+    """
 
     ## Define output file names
-    all_peaks = os.path.join(working_directory, working_directory.split('/')[-1] + '.all_peaks.batch_' + batch + '.' + mode + '.csv')
-    aligned_table = os.path.join(working_directory, working_directory.split('/')[-1] + '.aligned_table.batch_' + batch + '.' + mode + '.csv')
+    all_peaks = os.path.join(working_directory, dataset_ID + '.all_peaks.batch_' + batch + '.' + mode + '.csv')
+    aligned_table = os.path.join(working_directory, dataset_ID + '.aligned_table.batch_' + batch + '.' + mode + '.csv')
 
     ## Read in the proc_file
     proc_df = pd.read_csv(proc_file, sep='\t', index_col=0)
@@ -101,6 +132,7 @@ def align_peaks(rimage, batch, samples, mode, proc_file, working_directory):
         for sid in proc_df.index:
             f.write(sid + '\t' + str(proc_df.loc[sid, 'batch ' + batch]) + '\n')            
     
+    ## Call align_peaks.R to align the peaks and find adducts + isotopes
     # aligned_table and all_peaks are output files. Everything else is an input
     os.system('Rscript /home/ubuntu/scripts/align_peaks.R --rimage ' + rimage + ' --batch ' + tmp_file + ' --mode ' + mode + 
               ' --aligned ' + aligned_table + ' --allpeaks ' + all_peaks)
@@ -168,7 +200,7 @@ def extract_batches(seq_df, mode):
     b2m = {}
     to_remove = []
     for batch in batches:
-        b2m[batch] = [seq_df.loc[s, 'ionmode'] for s in b2s[batch]]
+        b2m[batch] = [seq_df.loc[s, 'ion mode'] for s in b2s[batch]]
         mode_match = sum([i == mode for i in b2m[batch]])/float(len(b2m[batch]))   # this gets the percent of samples in each batch that match the input mode. Bc these are both ints, it's either 1 or 0.
         if mode_match != 1:
             to_remove.append(batch)

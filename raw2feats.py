@@ -1,21 +1,29 @@
 """
 Created on Wed Oct 21 21:16:48 2015
 
-@author: Claire
+@author: Claire Duvallet
+
+raw2feats.py converts raw mzML files into aligned feature tables.
+
+It interfaces with a summary file named summary_file.txt as parsed by SummaryParserMtab.
+The summary_file.txt contains tab-delimited fields, as further described in the documentation.
+
+This code calls pick_peaks.R to pick peaks in the specified ionzation mode. 
+All files with the given ionization mode in the sequence file must be in the data directory.
+If ionization mode is negative, mzML files should be name <fname>.threshold1000.mzML
+If ionization mode is positive, mzML files should be name <fname>.mzML
+Where <fname> is the file name in the sequence file.
+
+If an Rimage file with picked peaks is given in the summary_file, peak-picking with xcmsSet is skipped.
+The Rimage file should contain an xcmsSet object called xs
+
+Peaks are aligned across all batches specified in the sequence file
+
+All output files are labeled with the mode and dataset_ID, and saved in the output_directory
+If no output directory is specified, all file are saved in <homedirectory>/proc/<dataset_ID>_proc_mtab/
 """
-## Note: code to install packages: http://rpy.sourceforge.net/rpy2/doc-dev/html/robjects_rpackages.html#installing-removing-r-packages
 
-## MSConvert step:
-# We're going to rename the files with a suffix indicating whether it's 1000 threshold or NoThreshold
 
-## raw2feats.py is a wrapper to be called by Master.py
-# for now, don't worry about what flags are read by Master vs. raw2feats.py
-# in this code, identify where users inputs should go (i.e. readouts from summary file, sequence file, or defaults)
-
-## preprocessing_metabolomics.py contains the actual functions that do the heavy lifting
-# for example, align_features(), pick_peaks(), etc will be in this script
-# The inputs to those scripts are parsed by raw2feats.py and given as inputs to these functions
-# these functions might just be fancy calls to R, either via command line or rpy2 fancy acrobatics
 #%%
 import preprocessing_metab as mtab
 import pandas as pd
@@ -28,7 +36,7 @@ usage = "%prog -i INPUT_DIR -o OUTPUT_DIR_FULL_PATH"
 parser = OptionParser(usage)
 parser.add_option("-i", "--input_dir", type="string", dest="input_dir")
 parser.add_option("-o", "--output_dir", type="string", dest="output_dir")
-parser.add_option("-r", "--raw_data", dest="raw_data", default='True', help='if True, raw data needs to be converted to mzML using MSConvert. If False, assumes mzML files already exist')
+parser.add_option("-r", "--raw_data", dest="raw_data", default='False', help='if True, raw data needs to be converted to mzML using MSConvert. If False, assumes mzML files already exist')
 (options, args) = parser.parse_args()
 
 
@@ -105,7 +113,7 @@ seq_df = pd.read_csv(sequence_file_path, sep=sequence_file_separator, index_col=
 seq_df.columns = [str(col).lower() for col in seq_df.columns]
 
 # Check that the required columns are in sequence file.
-required_cols = ['file name', 'ionmode', 'batches']
+required_cols = ['file name', 'ion mode', 'batches']
 for col in required_cols:
     if col not in seq_df.columns:
         raise NameError('Required column ' + col + ' not found in sequence file')
@@ -142,7 +150,7 @@ elif mode == 'positive':
 # If no Rimage is specified, do peak picking:
 if not rimage:
     print('[[Peak Picking]] No Rimage specified. Picking peaks in ' + mode + ' mode...')
-    rimage, proc_file = mtab.pick_peaks(seq_df, mode, params, data_directory, working_directory)
+    rimage, proc_file = mtab.pick_peaks(seq_df, mode, params, data_directory, working_directory, dataset_ID)
     print('[[Peak Picking]] Picking peaks in ' + mode + ' mode complete.')
     summary_obj.attribute_value_mtab['RIMAGE_FILE'] = rimage
 else:
@@ -151,13 +159,13 @@ else:
     os.system('cp ' + rimage + ' ' + working_directory)
     # Create a proc_file from the seq_df
     proc_file = os.path.join(working_directory, working_directory.split('/')[-1] + '.processing_tracker.' + mode + '.txt')
-    proc_df = seq_df[seq_df['ionmode'] == mode]
+    proc_df = seq_df[seq_df['ion mode'] == mode]
     proc_df['rimage'] = pd.Series(len(proc_df.index) * [rimage], index=proc_df.index)
     proc_df.to_csv(proc_file, sep='\t')
 
 ## 4. Align peaks (per batch)
-# 4.1 read in the batches to be aligned from the sequence file
-# batches are comma-separated on the "batches" column of seq_df
+# Read in the batches to be aligned from the sequence file
+# batches are comma-separated in the "batches" column of seq_df
 batches, b2s = mtab.extract_batches(seq_df, mode)
 
 ## Align peaks in each batch
@@ -166,7 +174,7 @@ batches, b2s = mtab.extract_batches(seq_df, mode)
 for batch in batches:
     samples = b2s[batch]
     print('[[Align peaks]] Aligning batch ' + batch + ', containing samples ' + ','.join(samples)+ '...')
-    mtab.align_peaks(rimage, batch, samples, mode, proc_file, working_directory)
+    mtab.align_peaks(rimage, batch, samples, mode, proc_file, working_directory, dataset_ID)
     print('[[Align peaks]] Aligning batch ' + batch + ', containing samples ' + ','.join(samples)+ '. Complete.')
     
 summary_obj.attribute_value_mtab['PROCESSED'] = 'True'

@@ -1,9 +1,11 @@
+## Uses xcms to align peaks in a batch of samples
+# Interfaces with preprocessing_mtab.py
+# Code adapated from Krista Longnecker by Claire Duvallet
 
 library(optparse)
 library(xcms)
 library(CAMERA)
 
-## Uses xcms to align peaks in a batch of samples
 option_list = list(
   make_option(c('-i', '--rimage'), default='', type='character',
               help='path to rimage file for aligning'),
@@ -21,15 +23,13 @@ option_list = list(
 args = parse_args(OptionParser(option_list=option_list), args=commandArgs(TRUE))
 
 ## Read in which samples are part of this processing batch
-#print(args$rimage)
-#print(args$batch)
 classes = read.delim(args$batch, stringsAsFactors=FALSE)$inbatch
-#print(classes)
 
 # For some reason, loading an Rimage erases my args (but doesn't erase these variables)
 alignedfile = args$aligned
 allpeaksfile = args$allpeaks
 mode = args$mode
+
 ## Load Rimage which contains xs (xcmsSet object)
 load(args$rimage)
 
@@ -37,7 +37,6 @@ load(args$rimage)
 sampclass(xs) = classes
 xsSubset = split(xs, classes)[['1']]
 nSamples = length(xsSubset@filepaths)
-#print(xsSubset)
 
 ## Align peaks
 # Align across samples with Obiwarp. Returns an xcmsSet object. I have no idea how rc.obi and xsSubset are different from each other
