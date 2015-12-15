@@ -139,13 +139,13 @@ class SummaryParser():
             # Read dataset ID
             self.datasetID = summary_file_lines[0].split('\t')[1].rstrip('\n\r')
 
-            # Read 16S attributes
-            [startline, endline] = self.Extract16SLines()
-            for i in range(startline, endline):
-                line = summary_file_lines[i].split('\t')
-                attribute = line[0]
-                value = line[1].rstrip('\n\r')
-                self.attribute_value_16S[attribute] = value
+#            # Read 16S attributes
+#            [startline, endline] = self.Extract16SLines()
+#            for i in range(startline, endline):
+#                line = summary_file_lines[i].split('\t')
+#                attribute = line[0]
+#                value = line[1].rstrip('\n\r')
+#                self.attribute_value_16S[attribute] = value
 
             # Read metabolomics attributes
             [startline, endline] = self.ExtractMtabLines()
@@ -163,11 +163,11 @@ class SummaryParser():
             summary_fid.write('DATASET_ID' + '\t' + self.datasetID + '\n')
             summary_fid.write('\n')
 
-            # 16S portion
-            summary_fid.write('#16S_start' + '\n')
-            for [key, value] in self.attribute_value_16S.items():
-                summary_fid.write(key + '\t' + value + '\n')
-            summary_fid.write('#16S_end' + '\n')
+#            # 16S portion
+#            summary_fid.write('#16S_start' + '\n')
+#            for [key, value] in self.attribute_value_16S.items():
+#                summary_fid.write(key + '\t' + value + '\n')
+#            summary_fid.write('#16S_end' + '\n')
 
             # metabolomics portion
             summary_fid.write('#mtab_start\n')

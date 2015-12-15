@@ -1,0 +1,8 @@
+DATASET_ID	test2
+
+#mtab_start
+RIMAGE_FILE	C:\Users\Claire\Documents\GitHub\metabolomics\test1_hi\test2.picked_peaks.positive.Rimage
+MODE	positive
+PROCESSED	True
+SEQUENCE_FILE	test_sequence_file.csv
+#mtab_end

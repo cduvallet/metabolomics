@@ -6,6 +6,7 @@ Created on Wed Oct 21 21:16:48 2015
 raw2feats.py converts raw mzML files into aligned feature tables.
 
 It interfaces with a summary file named summary_file.txt as parsed by SummaryParserMtab.
+The SummaryParserMtab.py code should be either in the same directory as raw2feats.py or in your PYTHONPATH variable.
 The summary_file.txt contains tab-delimited fields, as further described in the documentation.
 
 This code calls pick_peaks.R to pick peaks in the specified ionzation mode. 
@@ -25,9 +26,10 @@ If no output directory is specified, all file are saved in <homedirectory>/proc/
 
 
 #%%
-import preprocessing_metab as mtab
+import preprocessing_mtab as mtab
 import pandas as pd
-import os, sys
+import os
+import shutil
 from optparse import OptionParser
 from SummaryParserMtab import *
 
@@ -35,13 +37,14 @@ from SummaryParserMtab import *
 usage = "%prog -i INPUT_DIR -o OUTPUT_DIR_FULL_PATH"
 parser = OptionParser(usage)
 parser.add_option("-i", "--input_dir", type="string", dest="input_dir")
-parser.add_option("-o", "--output_dir", type="string", dest="output_dir")
+parser.add_option("-o", "--output_dir", type="string", dest="output_dir", help='Full path to output directory')
 parser.add_option("-r", "--raw_data", dest="raw_data", default='False', help='if True, raw data needs to be converted to mzML using MSConvert. If False, assumes mzML files already exist')
 (options, args) = parser.parse_args()
 
 
 if( not options.input_dir ):
     parser.error("No data directory specified.")
+options.input_dir = os.path.normpath(options.input_dir)
 
 # Parse summary file for dataset ID
 summary_file = os.path.join(options.input_dir, 'summary_file.txt')
@@ -57,11 +60,15 @@ dataset_ID = summary_obj.datasetID
 #    print("WARNING: ", *objs, file=sys.stderr)
 
 # If no output directory specified, default to $home/proc/
-homedir = os.getenv("HOME")
+homedir = os.path.expanduser("~")
 if( not options.output_dir ):
-    print("No output directory name specified.  Writing to " + homedir + "/proc/ by default.")
-    options.output_dir = homedir + '/proc/' + dataset_ID + '_proc_mtab'
-
+    proc_dir = os.path.join('proc', dataset_ID + '_proc_mtab')
+    options.output_dir = os.path.join(homedir, proc_dir)
+    print("No output directory name specified.  Writing to " + options.output_dir)
+else:
+    options.output_dir = os.path.normpath(options.output_dir)
+    print("Saving to output directory " + options.output_dir)
+    
 # Make a directory for the mtab processing results
 working_directory = options.output_dir
 try:
@@ -102,10 +109,10 @@ if mode != 'negative' and mode != 'positive':
 # Get Rimage file if it is given. If an Rimage file is given, your sequence file should only contain the samples in this Rimage file (??? TODO ???)
 # The Rimage file should have an xcmsSet object called xs that contains the picked peaks from your mzML files
 try:
-    rimage = os.path.join(options.input_dir, summary_obj.attribute_value_mtab['RIMAGE_FILE'])
+    rimage = summary_obj.attribute_value_mtab['RIMAGE_FILE']
+    rimage = os.path.normpath(rimage)
 except:
     rimage = ''
-
 #%%#0. parse sequence file
 ## Sequence file path is specified in summary file
 # Note: first column should be the sample ID
@@ -119,10 +126,10 @@ for col in required_cols:
         raise NameError('Required column ' + col + ' not found in sequence file')
 
 #1. MSConvert (if raw data given)
-if raw_data == 'True':
-    print('Need to convert to mzML files. Running MSConvert')
-    # Run MSConvert
-    # TODO: Thomas - what's the best way to do that? On another node? we can call MSConvert from command line on a windows node
+# Not supported
+#if raw_data == 'True':
+#    print('Need to convert to mzML files. Running MSConvert')
+#    # Run MSConvert
 
 ## 3. Peak picking
 # Params is a dictionary of paramters to give to xcms() code
@@ -155,12 +162,12 @@ if not rimage:
     summary_obj.attribute_value_mtab['RIMAGE_FILE'] = rimage
 else:
     print('[[Peak picking]] Rimage ' + rimage + ' specified. Continuing with alignment')
-    # Copy the rimage file into the proc directory
-    os.system('cp ' + rimage + ' ' + working_directory)
+    # Copy the rimage file into the output directory, it it's not already there
+    os.system('copy ' + rimage + ' ' + working_directory)
     # Create a proc_file from the seq_df
-    proc_file = os.path.join(working_directory, working_directory.split('/')[-1] + '.processing_tracker.' + mode + '.txt')
+    proc_file = os.path.join(working_directory, dataset_ID + '.processing_tracker.' + mode + '.txt')
     proc_df = seq_df[seq_df['ion mode'] == mode]
-    proc_df['rimage'] = pd.Series(len(proc_df.index) * [rimage], index=proc_df.index)
+    proc_df['rimage'] = rimage
     proc_df.to_csv(proc_file, sep='\t')
 
 ## 4. Align peaks (per batch)
@@ -179,3 +186,7 @@ for batch in batches:
     
 summary_obj.attribute_value_mtab['PROCESSED'] = 'True'
 summary_obj.WriteSummaryFile()
+
+# Copy the new summary file into the output directory
+shutil.copy(summary_file, os.path.join(working_directory, 'summary_file.txt'))
+print('[[Processing mzML files]] Done.')

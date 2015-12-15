@@ -1,22 +1,8 @@
-Sample Name,File Name,Comment,Instrument Method,Path,Position,Inj Vol,Sample Type,Sample ID,IonMode,Batches
-S1,mtab_alm_081715_01,MQ Blank pos,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_partialLoop_031214_C,D:\Alm\2015_0817\,1A1,10,Unknown,1A1,positive,
-S2,mtab_alm_081715_02,"Mtab mix 1, 1 ug/ml pos",C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A2,10,Unknown,1A1,positive,
-S3,mtab_alm_081715_03,MQ Blank pos,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A1,10,Unknown,1A1,positive,
-S4,mtab_alm_081715_04,MQ Blank neg,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A2,10,Unknown,1A1,negative,
-S5,mtab_alm_081715_05,"Mtab mix 1, 1 ug/ml neg",C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A2,10,Unknown,1A1,negative,
-S6,mtab_alm_081715_06,MQ Blank neg,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A1,10,Unknown,1A1,negative,neg_all
-S7,mtab_alm_081715_07,"UW 5 std, 1 ug/ml neg",C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A3,10,Unknown,1A1,negative,"neg_all, 2"
-S8,mtab_alm_081715_08,MQ Blank neg,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A1,10,Unknown,1A1,negative,"neg_all, 1"
-S9,mtab_alm_081715_09,UW Pooled PPL neg 1,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A4,10,Unknown,1A1,negative,"neg_all, 1, 2"
-S10,mtab_alm_081715_15,UW Pooled PPL pos,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A4,10,Unknown,1A1,positive,"pos_all,3"
-S11,mtab_alm_081715_16,UW Pooled PPL pos 1,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A4,10,Unknown,1A1,positive,"pos_all,4"
-S12,mtab_alm_081715_17,UW Blank 1 PPL pos,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_FullLoop_031214_C,D:\Alm\2015_0817,1A5,20,Unknown,1A1,positive,"pos_all,3"
-S13,mtab_alm_081715_18,UW 17 PPL pos,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_FullLoop_031214_C,D:\Alm\2015_0817,1A6,20,Unknown,1A1,positive,"pos_all,4"
-S14,mtab_alm_081715_19,UW 7 PPL pos,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_FullLoop_031214_C,D:\Alm\2015_0817,1A7,20,Unknown,1A1,positive,0
-S15,mtab_alm_081715_20,UW 4 PPL pos,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_FullLoop_031214_C,D:\Alm\2015_0817,1A8,20,Unknown,1A1,positive,0
-S16,mtab_alm_081715_21,UW Pooled PPL pos 2,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A4,10,Unknown,1A1,positive,0
-S17,mtab_alm_081715_22,MQ Blank pos,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A1,10,Unknown,1A1,positive,0
-S18,mtab_alm_081715_57,MQ Blank neg,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_081915_C,D:\Alm\2015_0817,1A1,10,Unknown,1A1,negative,0
-S19,mtab_alm_081715_58,"UW 17 PPL diluted to 5%, remade",C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_081915_C,D:\Alm\2015_0817,1D1,10,Unknown,1A1,negative,0
-S20,mtab_alm_081715_59,"UW 17 PPL diluted to 10%, remade",C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_081915_C,D:\Alm\2015_0817,1D2,10,Unknown,1A1,negative,0
-S21,mtab_alm_081715_60,MQ Blank neg,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_081915_C,D:\Alm\2015_0817,1A1,10,Unknown,1A1,negative,0
+Sample Name,File Name,Comment,Instrument Method,Path,Position,Inj Vol,Sample Type,Sample ID,Ion Mode,Batches
+S6,mtab_alm_081715_06,MQ Blank neg,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A1,10,Unknown,1A1,negative,
+S7,mtab_alm_081715_07,"UW 5 std, 1 ug/ml neg",C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A3,10,Unknown,1A1,negative,
+S8,mtab_alm_081715_08,MQ Blank neg,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A1,10,Unknown,1A1,negative,
+S9,mtab_alm_081715_09,UW Pooled PPL neg 1,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_neg_dynexc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A4,10,Unknown,1A1,negative,fail
+S10,mtab_alm_081715_15,UW Pooled PPL pos,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A4,10,Unknown,1A1,positive,"1, postest, fail"
+S11,mtab_alm_081715_16,UW Pooled PPL pos 1,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_partialLoop_031214_C,D:\Alm\2015_0817,1A4,10,Unknown,1A1,positive,"1, postest"
+S12,mtab_alm_081715_17,UW Blank 1 PPL pos,C:\Xcalibur\methods\Kujawinski\ESI metabolites\Mtab_RP_synfus_pos_dynExc_top4_FullLoop_031214_C,D:\Alm\2015_0817,1A5,20,Unknown,1A1,positive,1
