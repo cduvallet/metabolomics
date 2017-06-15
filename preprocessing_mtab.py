@@ -79,7 +79,7 @@ def pick_peaks(seq_df, mode, params, data_directory, working_directory, dataset_
     # It saves the output diagnostics as a pdf file, and the resulting xs xcmsSet object in the rimage file.
     # It also labels each file in the xs object by its sampleID (using the sampclass method). The sample IDs are provided through the sampleIDs.<mode>.txt file, created above
     # All parameters except pdf_file and rimage_file are inputs to this function.
-    cmdstr = 'C:/"Program Files"/R/R-3.2.2/bin/Rscript.exe C:\Users\Claire\Documents\GitHub\metabolomics\pick_peaks.R ' + \
+    cmdstr = 'Rscript /home/ubuntu/duvallet/metabolomics/pick_peaks.R ' + \
               '-p ' + ppm + ' -s ' + snthresh + ' --filterMin ' + prefilter_min + \
               ' --filterMax ' + prefilter_max  + ' -i ' + integrate + ' --peakMin ' + peakwidth_min + \
               ' --peakMax ' + peakwidth_max + ' -n ' + noise + ' -f ' + mzdatafiles + \
@@ -135,7 +135,7 @@ def align_peaks(rimage, batch, samples, mode, proc_file, working_directory, data
     
     ## Call align_peaks.R to align the peaks and find adducts + isotopes
     # aligned_table and all_peaks are output files. Everything else is an input
-    cmdstr = 'C:/"Program Files"/R/R-3.2.2/bin/Rscript.exe C:/Users/Claire/Documents/GitHub/metabolomics/align_peaks.R ' + \
+    cmdstr = 'Rscript /home/ubuntu/duvallet/metabolomics/align_peaks.R ' + \
               '--rimage ' + rimage + ' --batch ' + tmp_file + ' --mode ' + mode + \
               ' --aligned ' + aligned_table + ' --allpeaks ' + all_peaks
     os.system(cmdstr)

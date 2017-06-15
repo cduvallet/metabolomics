@@ -163,7 +163,7 @@ if not rimage:
 else:
     print('[[Peak picking]] Rimage ' + rimage + ' specified. Continuing with alignment')
     # Copy the rimage file into the output directory, it it's not already there
-    os.system('copy ' + rimage + ' ' + working_directory)
+    os.system('cp ' + rimage + ' ' + working_directory)
     # Create a proc_file from the seq_df
     proc_file = os.path.join(working_directory, dataset_ID + '.processing_tracker.' + mode + '.txt')
     proc_df = seq_df[seq_df['ion mode'] == mode]
