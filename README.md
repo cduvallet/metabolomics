@@ -7,9 +7,6 @@ This repo contains scripts to process metabolomics data.
 - `ms_convert_tool.r` - Krista's R script that she used for converting files
 - `msconvert_wrapper.py` - Claire's python script to convert files
 
-#### To do
-- command-line interface for `msconvert_wrapper.py`
-
 ## Processing data
 
 - `raw2feats.py` - user-interfacing script that coordinates the processing. This is the script you should run to process your data.
