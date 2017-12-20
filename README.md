@@ -2,6 +2,8 @@
 
 This repo contains scripts to process metabolomics data.
 
+You can find the documentation on [ReadTheDocs](http://untargeted-metabolomics-pipeline.readthedocs.io/en/latest/index.html).
+
 ## MS Convert
 
 - `ms_convert_tool.r` - Krista's R script that she used for converting files
@@ -14,8 +16,5 @@ This repo contains scripts to process metabolomics data.
 - `align_peaks.R`, `pick_peaks.R` - R scripts which are called and actually do the processing
 - `SummaryParserMtab.py` - module to parse summary file
 
-- `mass-spec-processing-documentation.pdf` - documentation explaining how to use `raw2feats.py`
-
 #### To do
-- documentation on ReadTheDocs
 - clean up unnecessary files
