@@ -47,9 +47,9 @@ The required parts of the sequence file are as follows:
 -  **File Name**: This column should contain the raw data file name
    (without any extensions). The processing code assumes that the mzML
    files are created from these file names. For example, if you have
-   ``mtabalmsample1`` in this column, the code assumes that the
-   corresponding mzML files are m\ ``tabalmsample1.threshold1000.mzML``
-   and ``mtabalmsample1.mzML``.
+   ``mtab_alm_sample1`` in this column, the code assumes that the
+   corresponding mzML files are ``mtab_alm_sample1.threshold1000.mzML``
+   and ``mtab_alm_sample1.mzML``.
 -  **Ion Mode**: This column contains the ion mode used for each sample.
    Accepted values are ``negative`` and ``positive``.
 -  **Batches**: This column specifies the "batches" of samples you want
@@ -78,19 +78,19 @@ Summary File
 ~~~~~~~~~~~~
 
 Once you have your data and sequence file all sorted, you need to create
-a sum- mary file that “talks” to ``raw2feats.py`` (through the
+a summary file that "talks" to ``raw2feats.py`` (through the
 ``SummaryParserMtab.py`` module). Your summary file should be a
-tab-delimited file named ``summaryfile.txt`` and placed in the same
+tab-delimited file named ``summary_file.txt`` and placed in the same
 directory as your sequence file.
 
 Required attributes
 ^^^^^^^^^^^^^^^^^^^
 
 The following attributes are required to be specified in
-``summaryfile.txt``:
+``summary_file.txt``:
 
 +-------------------+---------------------------------------------------------+
-| ``DATASET\_ID``   | Identifier for this processing run. Output files will   |
+| ``DATASET_ID``    | Identifier for this processing run. Output files will   |
 |                   |  contain this string as an identifier.                  |
 |-------------------+---------------------------------------------------------+
 | ``MODE``          | Ionization mode. Accepted values are ``negative`` or    |
@@ -98,7 +98,7 @@ The following attributes are required to be specified in
 |                   | mode files to process, you will need to do them in two  |
 |                   | separate runs.                                          |
 |-------------------+---------------------------------------------------------+
-| ``SEQUENCE\_FILE``| Name of sequence file. Full path is not necessary, as   |
+| ``SEQUENCE_FILE`` | Name of sequence file. Full path is not necessary, as   |
 |                   | sequence file is assumed to (and should) be in the same |
 |                   | directory as the summary file.                          |
 +-------------------+---------------------------------------------------------+
@@ -111,13 +111,13 @@ The following attributes can be specified in the summary file, but are
 not required for processing:
 
 +---------------------------------+--------------------------------------------+
-| ``DATA\_DIRECTORY``             | If the data is in a different directory,   |
+| ``DATA_DIRECTORY``              | If the data is in a different directory,   |
 |                                 | you can provide the full path to the       |
 |                                 | directory here. Otherwise the code         |
 |                                 | assumes that all of your mzML files are in |
 |                                 | the input directory.                       |
 +---------------------------------+--------------------------------------------+
-| ``SEQUENCE\_FILE\_DELIMITER``   | The sequence file is assumed to be         |
+| ``SEQUENCE_FILE_DELIMITER``     | The sequence file is assumed to be         |
 |                                 | comma-delimited. If this is not the case,  |
 |                                 | specify the delimitation here. (i.e. if    |
 |                                 | your sequence file is tab-delimited, this  |
@@ -136,7 +136,7 @@ not required for processing:
 |                                 | alignments without necessarily re-picking  |
 |                                 | peaks.                                     |
 +---------------------------------+--------------------------------------------+
-| ``RAW\_DATA``                   | ``True`` if you are providing raw data     |
+| ``RAW _DATA``                   | ``True`` if you are providing raw data     |
 |                                 | that needs to be converted to mzML,        |
 |                                 | ``False`` if you are directly providing    |
 |                                 | mzML files. **Note: the current code does  |
