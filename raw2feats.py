@@ -38,7 +38,9 @@ usage = "%prog -i INPUT_DIR -o OUTPUT_DIR_FULL_PATH"
 parser = OptionParser(usage)
 parser.add_option("-i", "--input_dir", type="string", dest="input_dir")
 parser.add_option("-o", "--output_dir", type="string", dest="output_dir", help='Full path to output directory')
-parser.add_option("-r", "--raw_data", dest="raw_data", default='False', help='if True, raw data needs to be converted to mzML using MSConvert. If False, assumes mzML files already exist')
+parser.add_option("-r", "--raw_data", dest="raw_data", default='False', help='if True, raw data needs to be '
+    + 'converted to mzML using MSConvert. If False, assumes mzML files already exist. NOTE: CONVERTING ' 
+    + ' TO MZML FROM RAW DATA NOT CURRENTLY SUPPORTED!!')
 (options, args) = parser.parse_args()
 
 
