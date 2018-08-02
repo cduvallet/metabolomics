@@ -7,6 +7,7 @@ Created on Fri Oct 23 14:00:22 2015
 import os
 from copy import copy
 import pandas as pd
+import numpy as np
 
 #%%# Wrapper functions for metabolomics pre processing steps
 def pick_peaks(seq_df, mode, params, data_directory, working_directory, dataset_ID):
@@ -79,7 +80,7 @@ def pick_peaks(seq_df, mode, params, data_directory, working_directory, dataset_
     # It saves the output diagnostics as a pdf file, and the resulting xs xcmsSet object in the rimage file.
     # It also labels each file in the xs object by its sampleID (using the sampclass method). The sample IDs are provided through the sampleIDs.<mode>.txt file, created above
     # All parameters except pdf_file and rimage_file are inputs to this function.
-    cmdstr = 'C:/"Program Files"/R/R-3.2.2/bin/Rscript.exe C:\Users\Claire\Documents\GitHub\metabolomics\pick_peaks.R ' + \
+    cmdstr = 'Rscript /home/ubuntu/users/duvallet/metabolomics/pick_peaks.R ' + \
               '-p ' + ppm + ' -s ' + snthresh + ' --filterMin ' + prefilter_min + \
               ' --filterMax ' + prefilter_max  + ' -i ' + integrate + ' --peakMin ' + peakwidth_min + \
               ' --peakMax ' + peakwidth_max + ' -n ' + noise + ' -f ' + mzdatafiles + \
@@ -127,17 +128,20 @@ def align_peaks(rimage, batch, samples, mode, proc_file, working_directory, data
     ## Write in a temp file indicating whether each sample is in the batch or not. Contains a 'inbatch' column where each sample is yes (1) or no (0)
     # The xcmsSet object in R has each sample labeled by its sampleID. The sampleIDs are in the same order as in proc_df, so the classlist given to the R script should have the samples in that order as well.
     # The R script reads in this tmp_batch_index.txt file to get the classlist. This file indicates (with 1's and 0's) which samples to align
+    tmp_df = pd.DataFrame(columns=['sample', 'inbatch'], data=np.array([proc_df.index.tolist(), proc_df['batch ' + batch]]).T)
     tmp_file = os.path.join(working_directory, 'tmp_batch_index.txt')
-    with open(tmp_file, 'w') as f:
-        f.write('sample\tinbatch\n')
-        for sid in proc_df.index:
-            f.write(sid + '\t' + str(proc_df.loc[sid, 'batch ' + batch]) + '\n')            
+    tmp_df.to_csv(tmp_file, sep='\t', index=False)
+#    with open(tmp_file, 'w') as f:
+#        f.write('sample\tinbatch\n')
+#        for sid in proc_df.index:
+#            f.write(sid + '\t' + str(proc_df.loc[sid, 'batch ' + batch]) + '\n')            
     
     ## Call align_peaks.R to align the peaks and find adducts + isotopes
     # aligned_table and all_peaks are output files. Everything else is an input
-    cmdstr = 'C:/"Program Files"/R/R-3.2.2/bin/Rscript.exe C:/Users/Claire/Documents/GitHub/metabolomics/align_peaks.R ' + \
+    cmdstr = 'Rscript /home/ubuntu/users/duvallet/metabolomics/align_peaks.R ' + \
               '--rimage ' + rimage + ' --batch ' + tmp_file + ' --mode ' + mode + \
               ' --aligned ' + aligned_table + ' --allpeaks ' + all_peaks
+    print(cmdstr)
     os.system(cmdstr)
     
     ## Update the processing tracker file with the file name of the aligned_table (instead of 1's and 0's as above)
@@ -167,47 +171,63 @@ def align_peaks(rimage, batch, samples, mode, proc_file, working_directory, data
 
 #%%# Other helpful functions for metabolomics preprocessing
 def extract_batches(seq_df, mode):
-    # Extract the batches of samples we want to align.
-    # Batches should be specified in the sequence file in the column 'batches'
-    # If one sample should be in multiple batches, the multiple batches should be comma-separated
-    # Returns batches, a list of the batch names to process that have the right mode
-    #         b2s, a dictionary with {batch: [samples in that batch]}. Samples are labeled by their sample ID in the sequence file (which are the indices of seq_df)
+    """
+    Extract the batches of samples we want to align.
+    Batches should be specified in the sequence file 
+    in the column 'batches'. If one sample should be in 
+    multiple batches, the batches should be comma-separated
+    in the column.
 
-    # Need to keep samples in the same order as in the sequence files
+    Parameters
+    ----------
+    seq_df : pandas DataFrame
+        Sequence dataframe with at least 'batches' and 
+        'ion mode' columns. Sample IDs in index.
+    mode : str
+        'negative' or 'positive' (should match the values
+        in the 'ion mode' column).
+    
+    Returns
+    -------
+    batches : list
+        list of batch names with the specified mode, and
+        no samples of the other mode.
+    b2s : dict
+        {batch: [samples in that batch]}. Samples are labeled 
+        as in the index of seq_df.
+    """
+
+    # Remove any samples which aren't in a batch
+    seq_df = seq_df.dropna(subset=['batches'])
     all_samples = seq_df.index
 
-    ## Create dictionary of batches for each sample. s2b[sample] = [batches that sample is in]
-    s2b = {key: value for key, value in zip(all_samples, seq_df['batches'])}
-    batches = []
-    for s in all_samples:
-        if isinstance(s2b[s], str):
-            s2b[s] = [i.strip() for i in s2b[s].strip().split(',')]
-        else:
-            s2b[s] = [i.strip() for i in str(s2b[s]).strip().split(',')]
-        batches = batches + s2b[s]
-        
+    ## Batches for each sample: s2b[sample] = [batches that sample is in]
+    s2b = {key: value for key, value in zip(seq_df.index, seq_df['batches'])}
+    s2b = {i: [str(j) for j in s2b[i].split(',')] for i in s2b}
+    batches = list(set(seq_df['batches'].str.cat(sep=',').split(',')))
+
     # nan and 0 are not valid batches, and will be skipped
-    batches = list(set(batches))
     if '0' in batches:
         batches.remove('0')
     if 'nan' in batches:
         batches.remove('nan')
     
-    ## Create dictionary with samples in each batch b2s[batch] = [samples in that batch]
+    ## Samples in each batch: b2s[batch] = [samples in that batch]
     b2s = {}
     for batch in batches:
         b2s[batch] = [s for s in all_samples if batch in s2b[s]]
-        
-    ## Extract the batches that have all samples with the specified mode
-    # If there's a batch with mixed sample modality, remove that batch too
-    b2m = {}
+
+    ## Extract batches with the correct ion mode, and with only
+    ## one mode
     to_remove = []
     for batch in batches:
-        b2m[batch] = [seq_df.loc[s, 'ion mode'] for s in b2s[batch]]
-        mode_match = sum([i == mode for i in b2m[batch]])/float(len(b2m[batch]))   # this gets the percent of samples in each batch that match the input mode. Bc these are both ints, it's either 1 or 0.
-        if mode_match != 1:
+        print(batch)
+        modes = seq_df[seq_df['batches'].str.contains(batch)]['ion mode'].unique()
+        # Make sure required mode is in samples 
+        # and batch only has one mode
+        if mode not in modes or len(modes) != 1:
             to_remove.append(batch)
-    for batch in to_remove:
-        batches.remove(batch)
+    # Remove bad batches
+    batches = [i for i in batches if i not in to_remove]
     
     return batches, b2s
